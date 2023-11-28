@@ -62,6 +62,7 @@ namespace RocketLeagueReplayParser.NetworkStream
                 case "Archetypes.Ball.Ball_Beachball":
                 case "Archetypes.Ball.Ball_Anniversary":
                 case "Archetypes.Ball.Ball_Football":
+                case "Archetypes.Ball.Ball_Ekin":
                     return classNetCacheByName["TAGame.Ball_TA"];
                 case "Archetypes.Ball.Ball_Breakout":
                     return classNetCacheByName["TAGame.Ball_Breakout_TA"];
@@ -119,6 +120,7 @@ namespace RocketLeagueReplayParser.NetworkStream
                 case "gameinfo_godball.GameInfo.gameinfo_godball:GameReplicationInfoArchetype":
                 case "GameInfo_GodBall.GameInfo.GameInfo_GodBall:GameReplicationInfoArchetype":
                 case "GameInfo_FootBall.GameInfo.GameInfo_FootBall:GameReplicationInfoArchetype":
+                case "GameInfo_FTE.GameInfo.GameInfo_FTE:GameReplicationInfoArchetype":
                     return classNetCacheByName["TAGame.GRI_TA"];
                 case "ProjectX.Default__NetModeReplicator_X":
                     return classNetCacheByName["ProjectX.NetModeReplicator_X"];
@@ -177,6 +179,8 @@ namespace RocketLeagueReplayParser.NetworkStream
                     return classNetCacheByName["TAGame.PickupTimer_TA"];
                 case "TAGame.Default__PRI_Breakout_TA":
                     return classNetCacheByName["TAGame.PRI_Breakout_TA"];
+                case "Archetypes.GameEvent.GameEvent_FTE_Part1_Prime":
+                    return classNetCacheByName["TAGame.GameEvent_FTE_TA"];
             }
 
             if (objectName.Contains("CrowdActor_TA"))
@@ -242,7 +246,7 @@ namespace RocketLeagueReplayParser.NetworkStream
                 || className == "TAGame.Ball_God_TA";
         }
 
-        public static ActorState Deserialize(int maxChannels, IDictionary<UInt32, ActorState> existingActorStates, List<ActorState> frameActorStates, string[] objectIndexToName, IDictionary<string, ClassNetCache> classNetCacheByName, UInt32 engineVersion, UInt32 licenseeVersion, UInt32 netVersion, BitReader br)
+        public static ActorState Deserialize(int maxChannels, IDictionary<UInt32, ActorState> existingActorStates, List<ActorState> frameActorStates, string[] objectIndexToName, IDictionary<string, ClassNetCache> classNetCacheByName, UInt32 engineVersion, UInt32 licenseeVersion, UInt32 netVersion, UInt32 changelist, BitReader br)
         {
             var startPosition = br.Position;
 			ActorState a = new ActorState();
@@ -298,7 +302,7 @@ namespace RocketLeagueReplayParser.NetworkStream
 						ActorStateProperty lastProp = null;
 						while (br.ReadBit())
 						{
-							lastProp = ActorStateProperty.Deserialize(oldState._classNetCache, objectIndexToName, engineVersion, licenseeVersion, netVersion, br);
+							lastProp = ActorStateProperty.Deserialize(oldState._classNetCache, objectIndexToName, engineVersion, licenseeVersion, netVersion, changelist, br);
                             
                             ActorStateProperty existingProperty = null;
                             if ( !a.Properties.TryGetValue(lastProp.PropertyId, out existingProperty) )
@@ -368,7 +372,7 @@ namespace RocketLeagueReplayParser.NetworkStream
 			}
         }
 
-        public void Serialize(int maxChannels, string[] objectNames, UInt32 engineVersion, UInt32 licenseeVersion, UInt32 netVersion, BitWriter bw)
+        public void Serialize(int maxChannels, string[] objectNames, UInt32 engineVersion, UInt32 licenseeVersion, UInt32 netVersion, UInt32 changelist, BitWriter bw)
         {
             bw.Write(Id, (UInt32)maxChannels);
 
@@ -405,7 +409,7 @@ namespace RocketLeagueReplayParser.NetworkStream
                 foreach (var property in Properties.Values)
                 {
                     bw.Write(true); // Here comes a property!
-                    property.Serialize(engineVersion, licenseeVersion, netVersion, bw);
+                    property.Serialize(engineVersion, licenseeVersion, netVersion, changelist, bw);
                 }
                 bw.Write(false);
             }

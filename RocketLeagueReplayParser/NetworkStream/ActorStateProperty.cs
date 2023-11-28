@@ -25,7 +25,7 @@ namespace RocketLeagueReplayParser.NetworkStream
             _classNetCache = copyFrom._classNetCache;
         }
 
-        public static ActorStateProperty Deserialize(IClassNetCache classMap, string[] objectIndexToName, UInt32 engineVersion, UInt32 licenseeVersion, UInt32 netVersion, BitReader br)
+        public static ActorStateProperty Deserialize(IClassNetCache classMap, string[] objectIndexToName, UInt32 engineVersion, UInt32 licenseeVersion, UInt32 netVersion, UInt32 changelist, BitReader br)
         {
             var asp = new ActorStateProperty();
 
@@ -213,6 +213,7 @@ namespace RocketLeagueReplayParser.NetworkStream
                 case "TAGame.SpecialPickup_Rugby_TA:bBallWelded":
                 case "TAGame.PRI_TA:bIsDistracted":
                 case "TAGame.GameEvent_TA:bIsBotMatch":
+                case "TAGame.Vehicle_TA:bHasPostMatchCelebration":
                     asp.Data = br.ReadBit();
                     break;
                 case "TAGame.CarComponent_TA:ReplicatedActive":
@@ -237,7 +238,16 @@ namespace RocketLeagueReplayParser.NetworkStream
                     asp.Data = TeamPaint.Deserialize(br);
                     break;
                 case "ProjectX.GRI_X:GameServerID":
-                    asp.Data = br.ReadBytes(8);
+                    // Not sure if this is the best to key off of, but it seems to work.
+                    // The usual suspects (engineVersion, licenseeVersion, netVersion) don't work
+                    if (changelist >= 406184)
+                    {
+                        asp.Data = br.ReadString();
+                    }
+                    else
+                    {
+                        asp.Data = br.ReadBytes(8);
+                    }
                     break;
                 case "ProjectX.GRI_X:Reservations":
                     asp.Data = Reservation.Deserialize(engineVersion, licenseeVersion, netVersion, br);
@@ -272,6 +282,8 @@ namespace RocketLeagueReplayParser.NetworkStream
                 case "Engine.WorldInfo:WorldGravityZ":
                 case "Engine.WorldInfo:TimeDilation":
                 case "TAGame.Ball_God_TA:TargetSpeed":
+                case "TAGame.Ball_TA:ReplicatedBallGravityScale":
+                case "TAGame.Ball_TA:BallHitSpinScale":
                     asp.Data = br.ReadFloat();
                     break;
                 case "TAGame.GameEvent_SoccarPrivate_TA:MatchSettings":
@@ -351,14 +363,14 @@ namespace RocketLeagueReplayParser.NetworkStream
             return asp;
         }
 
-        public virtual void Serialize(UInt32 engineVersion, UInt32 licenseeVersion, UInt32 netVersion, BitWriter bw)
+        public virtual void Serialize(UInt32 engineVersion, UInt32 licenseeVersion, UInt32 netVersion, UInt32 changelist, BitWriter bw)
         {
             bw.Write(PropertyId, (UInt32)_classNetCache.MaxPropertyId + 1);
 
-            SerializeData(engineVersion, licenseeVersion, netVersion, bw, PropertyName, Data);
+            SerializeData(engineVersion, licenseeVersion, netVersion, changelist, bw, PropertyName, Data);
         }
 
-        protected static void SerializeData(uint engineVersion, uint licenseeVersion, UInt32 netVersion, BitWriter bw, string propertyName, object data)
+        protected static void SerializeData(uint engineVersion, uint licenseeVersion, UInt32 netVersion, UInt32 changelist, BitWriter bw, string propertyName, object data)
         {
             // TODO: Make it so each property is typed better, so I serialize/deserialize types 
             // instead of having separate serialize/deserialize logic for each property.
@@ -410,6 +422,7 @@ namespace RocketLeagueReplayParser.NetworkStream
                 case "TAGame.GRI_TA:NewDedicatedServerIP":
                 case "ProjectX.GRI_X:MatchGUID":
                 case "ProjectX.GRI_X:MatchGuid": // Can remove as duplicate in case the comparison is ever made case insensitive
+                case "TAGame.PRI_TA:CurrentVoiceRoom":                
                 case "ProjectX.GRI_X:ReplicatedServerRegion":
                     ((string)data).Serialize(bw);
                     break;
@@ -537,6 +550,7 @@ namespace RocketLeagueReplayParser.NetworkStream
                 case "TAGame.SpecialPickup_Rugby_TA:bBallWelded":
                 case "TAGame.PRI_TA:bIsDistracted":
                 case "TAGame.GameEvent_TA:bIsBotMatch":
+                case "TAGame.Vehicle_TA:bHasPostMatchCelebration":
                     bw.Write((bool)data);
                     break;
                 case "TAGame.CarComponent_TA:ReplicatedActive":
@@ -559,7 +573,16 @@ namespace RocketLeagueReplayParser.NetworkStream
                     ((TeamPaint)data).Serialize(bw);
                     break;
                 case "ProjectX.GRI_X:GameServerID":
-                    bw.Write((IEnumerable<byte>)data);
+                    // Not sure if this is the best to key off of, but it seems to work.
+                    // The usual suspects (engineVersion, licenseeVersion, netVersion) don't work
+                    if (changelist >= 406184)
+                    {
+                        ((string)data).Serialize(bw);
+                    }
+                    else
+                    {
+                        bw.Write((IEnumerable<byte>)data);
+                    }
                     break;
                 case "ProjectX.GRI_X:Reservations":
                     ((Reservation)data).Serialize(engineVersion, licenseeVersion, bw);
@@ -594,6 +617,8 @@ namespace RocketLeagueReplayParser.NetworkStream
                 case "Engine.WorldInfo:WorldGravityZ":
                 case "Engine.WorldInfo:TimeDilation":
                 case "TAGame.Ball_God_TA:TargetSpeed":
+                case "TAGame.Ball_TA:ReplicatedBallGravityScale":
+                case "TAGame.Ball_TA:BallHitSpinScale":
                     bw.Write((float)data);
                     break;
                 case "TAGame.GameEvent_SoccarPrivate_TA:MatchSettings":
