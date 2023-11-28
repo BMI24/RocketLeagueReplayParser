@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net462</TargetFrameworks>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <Title>RocketLeagueReplayParser</Title>
     <Company>Joe Bott</Company>
     <Product>RocketLeagueReplayParser</Product>
